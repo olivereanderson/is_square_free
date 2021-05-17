@@ -35,21 +35,32 @@ pub mod concurrent_implementation {
     ///
     /// Panics if n is creater than 2^126
     pub fn concurrent_is_square_free(n: u128, num_threads: u32) -> bool {
+        if n <= 3 {
+            return true;
+        }
         const MAX: u128 = 2_u128.pow(126);
         if n > MAX {
             panic!("cannot work with numbers larger that {} \r\n", MAX);
         }
-        let num_threads = num_threads as u128;
         let i_sqrt = n.integer_sqrt();
-        let elements_per_thread = i_sqrt / (num_threads);
         if !is_square_free_edge_cases(n, i_sqrt) {
             return false;
         }
+        concurrent_is_square_free_start(n, 3, num_threads, i_sqrt)
+    }
+    fn concurrent_is_square_free_start(
+        n: u128,
+        start: u128,
+        num_threads: u32,
+        i_sqrt: u128,
+    ) -> bool {
+        let num_threads = num_threads as u128;
+        let elements_per_thread = (dbg!(i_sqrt) - dbg!(start)) / (num_threads);
         let (sender, receiver) = std::sync::mpsc::channel();
         for i in (1_u128..=num_threads).into_iter() {
-            let from = (i - 1) * elements_per_thread + 2;
+            let from = start + (i - 1) * elements_per_thread + 2;
             let to = if i != num_threads {
-                i * elements_per_thread + 2
+                start + i * elements_per_thread + 2
             } else {
                 i_sqrt
             };
