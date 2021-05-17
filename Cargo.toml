@@ -8,4 +8,5 @@ edition = "2018"
 
 [dependencies]
 crossbeam-channel = "0.5.1"
-bus = "2.2.3"
+integer-sqrt = "0.1.5"
+num_cpus = "1.13.0" 

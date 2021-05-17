@@ -1,4 +1,3 @@
-use is_square_free;
 use std::env;
 use std::time::SystemTime;
 fn main() {
@@ -10,8 +9,8 @@ fn main() {
     let now = SystemTime::now();
     let input_number = is_square_free::convert_input(base, exponent, sub);
     let input_number_is_square_free = if input_number > 2_u128.pow(60) {
-        let num_threads = 8;
-        is_square_free::concurrent_is_square_free(input_number, num_threads)
+        let num_cpus = num_cpus::get() as u32;
+        is_square_free::concurrent_is_square_free(input_number, num_cpus)
     } else {
         is_square_free::is_square_free(input_number)
     };

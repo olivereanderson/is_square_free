@@ -1,11 +1,8 @@
-use crossbeam_channel::{bounded};
+pub use concurrent_implementation::concurrent_is_square_free;
 use std::{iter, u128};
-use bus::{BusReader,Bus};
-//use crossbeam_utils::thread::scope;
-
 /// Check if a number is square free
 ///
-/// Panics if n is greater than the largest square number less than u128::MAX
+/// Panics if n is greater than 2^126
 pub fn is_square_free(n: u128) -> bool {
     const MAX: u128 = 2_u128.pow(126);
     if n > MAX {
@@ -19,47 +16,74 @@ pub fn is_square_free(n: u128) -> bool {
         .any(|i| (n % i) == 0)
 }
 
-fn is_square_free_piece(n: u128, from: u128, to: u128, mut r: BusReader<bool>) -> bool {
-    if from <= 2 && ((n % 4) == 0) {
-        return false;
+pub mod concurrent_implementation {
+    use integer_sqrt::IntegerSquareRoot;
+    fn is_square_free_piece(n: u128, from: u128, to: u128) -> bool {
+        !(from..to)
+            .into_iter()
+            .step_by(2)
+            .map(|i| i.pow(2))
+            .take_while(|i| (i <= &n))
+            .any(|i| (n % i) == 0)
     }
-    !(from..to)
-        .into_iter()
-        .map(|i| i.pow(2))
-        .take_while(|i| (i <= &n) && (r.try_recv().is_err()))
-        .any(|i| (n % i) == 0)
-}
 
-
-pub fn concurrent_is_square_free(n: u128, num_threads: u32) -> bool {
-    let num_threads = num_threads as u128; 
-    // multiple producer single receiver 
-    let (sender, receiver) = bounded(0);
-    // single producer multiple receiver 
-    let mut tx = Bus::new(1);
-    // split the computation into a piece per given thread 
-    let iter = (1_u128..=num_threads).into_iter();
-    let elements_per_thread = n/(num_threads);
-    for i in iter {
-        let from = (i-1) *elements_per_thread + 2;
-        let to = if i != num_threads {i * elements_per_thread + 2}else {n};
-        let rx = tx.add_rx(); 
-        let sender_clone = sender.clone();
-        std::thread::spawn(move || {
-            if !is_square_free_piece(n, from, to, rx ){
-                sender_clone.send(false).unwrap();
-            }
-        });
+    fn is_square_free_edge_cases(n: u128, i_sqrt: u128) -> bool {
+        !(i_sqrt >= 2 && ((n % 4) == 0 || (n == i_sqrt.pow(2))))
     }
-    drop(sender);
 
-    if receiver.recv().is_ok(){
-        if tx.try_broadcast(false).is_err() {
-            print!("Failed to broadcast \r\n");
+    /// Check if a number is square free
+    ///
+    /// Panics if n is creater than 2^126
+    pub fn concurrent_is_square_free(n: u128, num_threads: u32) -> bool {
+        const MAX: u128 = 2_u128.pow(126);
+        if n > MAX {
+            panic!("cannot work with numbers larger that {} \r\n", MAX);
         }
-        false 
-    } else {
-        true
+        let num_threads = num_threads as u128;
+        let i_sqrt = n.integer_sqrt();
+        let elements_per_thread = i_sqrt / (num_threads);
+        if !is_square_free_edge_cases(n, i_sqrt) {
+            return false;
+        }
+        let (sender, receiver) = std::sync::mpsc::channel();
+        for i in (1_u128..=num_threads).into_iter() {
+            let from = (i - 1) * elements_per_thread + 2;
+            let to = if i != num_threads {
+                i * elements_per_thread + 2
+            } else {
+                i_sqrt
+            };
+            let sender_clone = sender.clone();
+            std::thread::spawn(move || {
+                if !is_square_free_piece(n, from, to) {
+                    let _ = sender_clone.send(false);
+                }
+                drop(sender_clone);
+            });
+        }
+        drop(sender);
+
+        receiver.recv().is_err() // transmitters only send messages if n is not square free
+    }
+    #[cfg(test)]
+    mod tests {
+
+        use super::*;
+        #[test]
+        fn square_free_concurrent() {
+            let num_threads = 8;
+            assert!(concurrent_is_square_free(21, num_threads));
+            assert!(concurrent_is_square_free(2, num_threads));
+            assert!(concurrent_is_square_free(26, num_threads));
+        }
+
+        #[test]
+        fn not_square_free_concurrent() {
+            let num_threads = 8;
+            assert!(!concurrent_is_square_free(4, num_threads));
+            assert!(!concurrent_is_square_free(9, num_threads));
+            assert!(!concurrent_is_square_free(144, num_threads));
+        }
     }
 }
 
@@ -71,21 +95,6 @@ pub fn convert_input(base: i32, exponent: i32, sub: i32) -> u128 {
 mod tests {
 
     use super::*;
-    #[test]
-    fn square_free_concurrent(){
-        let num_threads = 8;
-        assert!(concurrent_is_square_free(21,num_threads));
-        assert!(concurrent_is_square_free(2,num_threads));
-        assert!(concurrent_is_square_free(26, num_threads));
-    }
-
-    #[test]
-    fn not_square_free_concurrent() {
-        let num_threads = 8; 
-        assert!(!concurrent_is_square_free(4,num_threads));
-        assert!(!concurrent_is_square_free(9, num_threads));
-        assert!(!concurrent_is_square_free(144,num_threads));
-    }
     #[test]
     fn not_square_free() {
         assert!(!is_square_free(4));
