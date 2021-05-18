@@ -8,7 +8,7 @@ fn main() {
     print!("{}^{} - {} is ... \r\n", base, exponent, sub);
     let num_cpus = num_cpus::get() as u32;
     let now = SystemTime::now();
-    let mut input_number_is_square_free = false;
+    let input_number_is_square_free: bool;
     if base.checked_pow(exponent as u32).is_some() {
         let input_number = is_square_free::convert_input(base, exponent, sub);
         input_number_is_square_free = if input_number > 2_u128.pow(60) {
