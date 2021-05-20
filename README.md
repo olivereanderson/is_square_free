@@ -36,7 +36,7 @@ use is_square_free
 use rug::Integer;
 
 let num_threads = 4;
-assert!(is_square_Free::arbitrary_precision::concurrent_is_square_free(Integer::from(2u128.pow(61) -1)));
+assert!(is_square_free::arbitrary_precision::concurrent_is_square_free(Integer::from(2u128.pow(61) -1)));
 ```
 
 ## Running the binary 
