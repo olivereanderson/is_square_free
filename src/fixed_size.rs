@@ -1,6 +1,4 @@
 pub use concurrent_implementation::concurrent_is_square_free;
-pub use concurrent_implementation::concurrent_is_square_free_start;
-
 use std::{iter, u128};
 /// Check if a number is square free
 ///
@@ -50,7 +48,7 @@ pub mod concurrent_implementation {
         (n > 2) && n.is_power_of_two()
     }
 
-    pub fn concurrent_is_square_free_start(
+    fn concurrent_is_square_free_start(
         n: u128,
         start: u128,
         num_threads: u32,
@@ -118,7 +116,7 @@ mod tests {
     #[test]
     fn square_free() {
         assert!(is_square_free(2));
-        assert!(is_square_free(21));
+        assert!(is_square_free(42));
         assert!(is_square_free(2_u128.pow(5) - 1));
     }
 }

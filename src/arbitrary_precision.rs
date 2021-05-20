@@ -1,6 +1,4 @@
 pub use concurrent_implementation::concurrent_is_square_free;
-pub use concurrent_implementation::concurrent_is_square_free_start;
-
 use rug::Integer;
 
 pub fn is_square_free(n: Integer) -> bool {
@@ -59,7 +57,7 @@ pub mod concurrent_implementation {
             && (n != i_sqrt.square())
     }
 
-    pub fn concurrent_is_square_free_start(
+    fn concurrent_is_square_free_start(
         n: Integer,
         start: Integer,
         num_threads: u32,

@@ -10,7 +10,7 @@ fn main() {
     let now = SystemTime::now();
     let input_number_is_square_free: bool;
     if base.checked_pow(exponent as u32).is_some() {
-        let input_number = is_square_free::convert_input(base, exponent, sub);
+        let input_number = is_square_free::fixed_size::convert_input(base, exponent, sub);
         input_number_is_square_free = if input_number > 2_u128.pow(60) {
             is_square_free::fixed_size::concurrent_is_square_free(input_number, num_cpus)
         } else {
